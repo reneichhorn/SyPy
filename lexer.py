@@ -127,6 +127,10 @@ class Parser:
         for token in self.tokens:
             print(token)
             match token.ttype:
+                # TODO
+                #   Handle AND and OR
+                #   Handle Numbers
+                #   Handle Strings
                 case TOKENS.TOKENSELECT:
                     self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.LITERALTOKENS['*']])
                     self.state = 's'
