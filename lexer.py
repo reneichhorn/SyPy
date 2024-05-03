@@ -1,7 +1,10 @@
+from time import time
 LEXER_ERROR = 'ERROR'
 LEXER_WARNING = 'WARNING'
 LEXER_INFO = 'INFO'
 DEBUG = True
+
+STRINGENCAPSULE = "'"
 
 
 class TOKENS:
@@ -16,17 +19,28 @@ class TOKENS:
     TOKENFROM = 'from'
     TOKENWHERE = 'where'
     TOKENNULL = 'null'
-    TOKENSYMBOL = 'symbol' 
+    TOKENSYMBOL = 'symbol'
+    TOKENLITSTRING = 'string'
+    TOKENAND = 'and'
+    TOKENOR = 'or'
+    TOKENEXCLAMATION = 'exclamation'
+    TOKENNUMBER = 'number'
+    TOKENPARENOPEN = 'parenopen'
+    TOKENPARENCLOSE = 'parenclose'
     LITERALTOKENS = {
-            ',': TOKENCOMMA,
-            '*': TOKENSTAR,
-            '=': TOKENEQUALS,
-            '>': TOKENGREATER,
-            '<': TOKENLESS,
-            '.': TOKENDOT,
-            ';': TOKENSEMICOLON
-            }
-    KEYWORDTOKENS = [TOKENSELECT, TOKENFROM, TOKENWHERE, TOKENNULL]
+        ',': TOKENCOMMA,
+        '*': TOKENSTAR,
+        '=': TOKENEQUALS,
+        '>': TOKENGREATER,
+        '<': TOKENLESS,
+        '.': TOKENDOT,
+        ';': TOKENSEMICOLON,
+        '!': TOKENEXCLAMATION,
+        '(': TOKENPARENOPEN,
+        ')': TOKENPARENCLOSE
+        # "'": TOKENLITSTRING
+    }
+    KEYWORDTOKENS = [TOKENSELECT, TOKENFROM, TOKENWHERE, TOKENNULL, TOKENAND, TOKENOR, TOKENNUMBER]
     KEYWORDS = {token.upper(): token for token in KEYWORDTOKENS}
 
 
@@ -52,8 +66,8 @@ class Lexer:
         self.bol = 0
         self.linecount = 0
 
-    def __getLoc(self):
-        return f'{self.linecount + 1}:{(self.cursor - self.bol) + 1}'
+    def __getLoc(self, tokenlen):
+        return f'{self.linecount + 1}:{(self.cursor - self.bol - tokenlen) + 1}'
 
     def __isInBounds(self):
         if self.cursor >= len(self.content):
@@ -68,14 +82,23 @@ class Lexer:
     def __isComma(self):
         return self.content[self.cursor] == ','
 
-    def __isSpecial(self):
+    def __isLiterallyToken(self):
         return self.content[self.cursor] in TOKENS.LITERALTOKENS.keys()
+
+    def __isString(self):
+        return self.content[self.cursor] == STRINGENCAPSULE
+
+    def __isNumber(self):
+        return self.__isInBounds() and not self.content[self.cursor].isspace() and not self.__isLiterallyToken() and self.content[self.cursor].isnumeric()
+
+    def __isAlnum(self):
+        return self.__isInBounds() and not self.content[self.cursor].isspace() and not self.__isLiterallyToken() and self.content[self.cursor].isalnum()
 
     def nextToken(self):
         if not self.__isInBounds():
-            log(LEXER_INFO, f'Reached EOF at {self.__getLoc()}')
+            log(LEXER_INFO, f'Reached EOF at {self.__getLoc(0)}')
             return None
-        while self.content[self.cursor].isspace():
+        while self.__isInBounds() and self.content[self.cursor].isspace():
             if self.content[self.cursor] == '\n':
                 self.linecount += 1
                 _ = self.__chopChar()
@@ -85,26 +108,46 @@ class Lexer:
         tokenstring = []
         if self.__isInBounds() and self.content[self.cursor] in TOKENS.LITERALTOKENS.keys():
             token = self.content[self.cursor]
-            tokenloc = self.__getLoc()
+            tokenloc = self.__getLoc(len(token))
             self.cursor += 1
             return Token(token, TOKENS.LITERALTOKENS[token], tokenloc)
-        while self.__isInBounds() and not self.content[self.cursor].isspace() and not self.__isSpecial():
-            # TODO: 
-            #   Tokenize Strings
-            #   Tokenize Numbers
-            #   Tokenize Dates
-            #   Tokenize And
-            #   Tokenize Or
-            tokenstring.append(self.__chopChar())
-        if self.__isInBounds() and self.__isSpecial:
-            self.cursor -= 1
-        token = ''.join(tokenstring).upper()
-        tokenloc = self.__getLoc()
-        ttype = TOKENS.TOKENSYMBOL
-        if token in TOKENS.KEYWORDS.keys():
-            ttype = TOKENS.KEYWORDS[token]
-        self.cursor += 1
-        return Token(token, ttype, tokenloc)
+        if self.__isInBounds() and self.__isString():
+            _ = self.__chopChar()
+            stringtoken = []
+            while self.__isInBounds() and not self.__isString():
+                stringtoken.append(self.__chopChar())
+            if not self.__isInBounds:
+                log(LEXER_ERROR, 'Reached EOF but Stringliteral was not closed')
+                quit(1)
+            _ = self.__chopChar()
+            token = ''.join(stringtoken)
+            tokenloc = self.__getLoc(len(token))
+            self.cursor += 1
+            return Token(token, TOKENS.TOKENLITSTRING, tokenloc)
+        if not self.__isNumber():
+            while self.__isAlnum():
+                # TODO:
+                #   Tokenize Dates
+                #   Tokenize more keywords like Group by, in, not
+                #   Tokenize (, ), [, ], {, }
+                tokenstring.append(self.__chopChar())
+            ttype = TOKENS.TOKENSYMBOL
+            token = ''.join(tokenstring).upper()
+            tokenloc = self.__getLoc(len(tokenstring))
+            if token in TOKENS.KEYWORDS.keys():
+                ttype = TOKENS.KEYWORDS[token]
+            return Token(token, ttype, tokenloc)
+        if self.__isNumber():
+            while self.__isNumber():
+                tokenstring.append(self.__chopChar())
+
+            ttype = TOKENS.TOKENNUMBER
+            token = ''.join(tokenstring)
+            tokenloc = self.__getLoc(len(tokenstring))
+            return Token(token, ttype, tokenloc)
+        if not self.__isInBounds():
+            log(LEXER_ERROR, 'Reached EOF unexpected at {self.__getLoc(0)}')
+            quit(1)
 
 
 class Parser:
@@ -113,72 +156,115 @@ class Parser:
         self.current = 0
         self.state = 'n'
 
-    def expectToken(self, expectedTokens):
-        if self.current + 1 > len(self.tokens) - 1:
-            log(LEXER_ERROR, f'Expected {" or ".join(expectedTokens)} but there are no more Tokens')
-            quit(1)
+    def expectToken(self, expectedTokens, errors):
+        if None in expectedTokens and self.current + 1 > len(self.tokens) - 1:
+            msg = 'Expected no more tokens, but have more'
+            log(LEXER_ERROR, msg)
+            errors.append(msg)
+        if None not in expectedTokens  and self.current + 1 > len(self.tokens) - 1:
+            msg = f'Expected {" or ".join(expectedTokens)} but there are no more Tokens'
+            log(LEXER_ERROR, msg)
+            errors.append(msg)
         nextToken = self.tokens[self.current + 1]
-        if nextToken.ttype not in expectedTokens:
-            log(LEXER_ERROR, f'Expected {" or ".join(expectedTokens)} but got "{nextToken.name}" of type "{nextToken.ttype}" at {nextToken.loc}')
-            quit(1)
-        return True
+        if None not in expectedTokens and nextToken.ttype not in expectedTokens:
+            msg = f'Expected {" or ".join(expectedTokens)} but got "{nextToken.name}" of type "{nextToken.ttype}" at {nextToken.loc}'
+            log(LEXER_ERROR, msg)
+            errors.append(msg)
+        return nextToken
 
     def parse(self):
+        errors = []
         for token in self.tokens:
-            print(token)
+            log(LEXER_INFO, token)
+            if self.current == 0:
+                if token.ttype != TOKENS.TOKENSELECT:
+                    msg = f'Query has to start with Select, but got {token.name}'
+                    log(LEXER_ERROR, msg) 
+                    errors.append(msg)
+                self.current += 1
+                continue
             match token.ttype:
                 # TODO
-                #   Handle AND and OR
-                #   Handle Numbers
-                #   Handle Strings
+                #   Handle Dates
+                #   Handle Group by
                 case TOKENS.TOKENSELECT:
-                    self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.LITERALTOKENS['*']])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.LITERALTOKENS['*'], TOKENS.TOKENLITSTRING, TOKENS.TOKENNUMBER], errors)
                     self.state = 's'
                 case TOKENS.TOKENFROM:
                     self.state = 'f'
-                    self.expectToken([TOKENS.TOKENSYMBOL])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL], errors)
                 case TOKENS.TOKENWHERE:
-                    self.expectToken([TOKENS.TOKENSYMBOL])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.TOKENLITSTRING, TOKENS.TOKENNUMBER], errors)
                     self.state = 'w1'
                 case TOKENS.TOKENSTAR:
-                    self.expectToken([TOKENS.TOKENCOMMA, TOKENS.TOKENFROM])
-                case TOKENS.TOKENSYMBOL:
+                    _ = self.expectToken([TOKENS.TOKENCOMMA, TOKENS.TOKENFROM], errors)
+                case TOKENS.TOKENSYMBOL | TOKENS.TOKENLITSTRING | TOKENS.TOKENNUMBER:
                     if self.state == 's':
-                        self.expectToken([TOKENS.TOKENCOMMA, TOKENS.TOKENFROM])
+                        _ = self.expectToken([TOKENS.TOKENCOMMA, TOKENS.TOKENFROM], errors)
                     if self.state == 'f':
-                        self.expectToken([TOKENS.TOKENSEMICOLON, TOKENS.TOKENWHERE])
+                        _ = self.expectToken([TOKENS.TOKENSEMICOLON, TOKENS.TOKENWHERE], errors)
                     if self.state == 'w1':
-                        self.expectToken([TOKENS.TOKENEQUALS, TOKENS.TOKENLESS, TOKENS.TOKENGREATER])
+                        _ = self.expectToken([TOKENS.TOKENEXCLAMATION, TOKENS.TOKENEQUALS, TOKENS.TOKENLESS, TOKENS.TOKENGREATER], errors)
                     if self.state == 'w2':
-                        self.expectToken([TOKENS.TOKENSEMICOLON])
-                        # TODO
-                        # Expect AND or OR Tokens
+                        nextToken = self.expectToken([TOKENS.TOKENSEMICOLON, TOKENS.TOKENAND, TOKENS.TOKENOR], errors)
+                        if nextToken in [TOKENS.TOKENAND, TOKENS.TOKENOR]:
+                            self.state = 'w1'
                 case TOKENS.TOKENEQUALS:
-                    self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.TOKENNULL])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.TOKENNULL, TOKENS.TOKENLITSTRING, TOKENS.TOKENNUMBER], errors)
                     self.state = 'w2'
                 case TOKENS.TOKENGREATER:
-                    self.expectToken([TOKENS.TOKENSYMBOL])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL], errors)
                     self.state = 'w2'
                 case TOKENS.TOKENLESS:
-                    self.expectToken([TOKENS.TOKENSYMBOL])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL], errors)
                     self.state = 'w2'
                 case TOKENS.TOKENCOMMA:
-                    self.expectToken([TOKENS.TOKENSYMBOL])
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.TOKENLITSTRING, TOKENS.TOKENNUMBER], errors)
                 case TOKENS.TOKENSEMICOLON:
-                    continue
+                    _ = self.expectToken([TOKENS.TOKENSELECT, None], errors)
+                case TOKENS.TOKENAND | TOKENS.TOKENOR:
+                    _ = self.expectToken([TOKENS.TOKENSYMBOL, TOKENS.TOKENLITSTRING, TOKENS.TOKENNUMBER], errors)
+                    self.state = 'w1'
+                case TOKENS.TOKENEXCLAMATION:
+                    _ = self.expectToken([TOKENS.TOKENEQUALS], errors)
+                case TOKENS.TOKENNULL:
+                    _ = self.expectToken([TOKENS.TOKENSEMICOLON, TOKENS.TOKENAND, TOKENS.TOKENOR], errors)
                 case _:
-                    print(token.ttype)
-                    log(LEXER_ERROR, 'UNREACHABLE')
-                    quit(1)
+                    msg = f'Unhandles token type {token.ttype}'
+                    log(LEXER_ERROR, msg)
+                    errors.append(msg)
             self.current += 1
+            if self.current >= len(self.tokens) - 1:
+                return errors
 
 
-teststring = 'Select\t\t *, Id, Name             from       \n  Account Where 1=1;'
+teststring = """Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+
+"""
+start = time()
 lex = Lexer(teststring)
 tokens = []
 while token := lex.nextToken():
     tokens.append(token)
-
 par = Parser(tokens)
-par.parse()
+errors = par.parse()
 
+end = time()
+if len(errors) > 0:
+    for error in errors:
+        print(error)
+print(f'Generating tokens and validating of {len(teststring.split("\n"))} lines and {len(teststring)} characters took {end - start} seconds')
