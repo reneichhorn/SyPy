@@ -3,20 +3,22 @@
 The aim of this library is to have the possibility to query Salesforce data from the comfy command line.
 Its written in python. Get over it.
 
+
 # Requirements
 - python 3.10 or greater
 - Connected App
 
-# Why is there code?
-> Disclaimer
-> 
->> Because username and password authentification is not cool these days, you will need to set up a *Connected App* in Salesforce. You can read up [here](https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/quickstart.htm)
+
+# Why is there code? Where is the .exe?
+Disclaimer! 
+> Because username and password authentification is not cool these days, you will need to set up a **Connected App** in Salesforce. You can read up [here](https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/quickstart.htm)
 
 To install all needed libraries run:
 ```console
 pip install -r requirements.txt
 ```
-If you are a superior Linux user it is probably something like
+
+If you are a *superior* Linux user it is probably something like
 ```console
 pip3 install -r requirements.txt
 ```
@@ -33,8 +35,10 @@ To run it
 ```console
 python sfconnection.py
 ```
-If you are a superior Linux user it is probably something like
+
+Again, if you are a *superior* Linux user it is probably something like
 ```conole
 python3 sfconnection.py
 ```
-Right now it does not really do anything. And if you want to change the query, you have to change the code. Scary I know.
+# Description
+Right now it does not really do anything. If you want to change the query, you have to change the code. Scary I know.
