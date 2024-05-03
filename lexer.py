@@ -2,7 +2,7 @@ from time import time
 LEXER_ERROR = 'ERROR'
 LEXER_WARNING = 'WARNING'
 LEXER_INFO = 'INFO'
-DEBUG = True
+DEBUG = False
 
 STRINGENCAPSULE = "'"
 
@@ -78,9 +78,6 @@ class Lexer:
         ch = self.content[self.cursor]
         self.cursor += 1
         return ch
-
-    def __isComma(self):
-        return self.content[self.cursor] == ','
 
     def __isLiterallyToken(self):
         return self.content[self.cursor] in TOKENS.LITERALTOKENS.keys()
@@ -230,7 +227,7 @@ class Parser:
                 case TOKENS.TOKENNULL:
                     _ = self.expectToken([TOKENS.TOKENSEMICOLON, TOKENS.TOKENAND, TOKENS.TOKENOR], errors)
                 case _:
-                    msg = f'Unhandles token type {token.ttype}'
+                    msg = f'Unhandled token type {token.ttype}'
                     log(LEXER_ERROR, msg)
                     errors.append(msg)
             self.current += 1
@@ -239,7 +236,7 @@ class Parser:
 
 
 teststring = """Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and (1 != Null);
 Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
 Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
 Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
