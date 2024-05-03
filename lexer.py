@@ -235,33 +235,34 @@ class Parser:
                 return errors
 
 
-teststring = """Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and (1 != Null);
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
-Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+if __name__ == '__main__':
+    teststring = """Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and (1 != Null);
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
+    Select\t\t *, Id, Name, 'case'            from       \n  Account Where '12' = '32' and 1 != Null;
 
-"""
-start = time()
-lex = Lexer(teststring)
-tokens = []
-while token := lex.nextToken():
-    tokens.append(token)
-par = Parser(tokens)
-errors = par.parse()
+    """
+    start = time()
+    lex = Lexer(teststring)
+    tokens = []
+    while token := lex.nextToken():
+        tokens.append(token)
+    par = Parser(tokens)
+    errors = par.parse()
 
-end = time()
-if len(errors) > 0:
-    for error in errors:
-        print(error)
-print(f'Generating tokens and validating of {len(teststring.split("\n"))} lines and {len(teststring)} characters took {end - start} seconds')
+    end = time()
+    if len(errors) > 0:
+        for error in errors:
+            print(error)
+    print(f'Generating tokens and validating of {len(teststring.split("\n"))} lines and {len(teststring)} characters took {end - start} seconds')
