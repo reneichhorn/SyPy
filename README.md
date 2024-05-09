@@ -9,7 +9,7 @@ Its written in python. Get over it.
 - Connected App
 
 
-# Why is there code? Where is the .exe?
+# Why is there code? Just give me the .exe
 Disclaimer! 
 > Because username and password authentification is not cool these days, you will need to set up a **Connected App** in Salesforce. You can read up [here](https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/quickstart.htm)
 
